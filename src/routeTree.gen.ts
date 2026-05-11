@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -23,6 +24,11 @@ const CategoriesRoute = CategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BudgetRoute = BudgetRouteImport.update({
+  id: '/budget',
+  path: '/budget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
   '/categories': typeof CategoriesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
   '/categories': typeof CategoriesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
   '/categories': typeof CategoriesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/categories' | '/settings'
+  fullPaths: '/' | '/budget' | '/categories' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/categories' | '/settings'
-  id: '__root__' | '/' | '/categories' | '/settings'
+  to: '/' | '/budget' | '/categories' | '/settings'
+  id: '__root__' | '/' | '/budget' | '/categories' | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BudgetRoute: typeof BudgetRoute
   CategoriesRoute: typeof CategoriesRoute
   SettingsRoute: typeof SettingsRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/budget': {
+      id: '/budget'
+      path: '/budget'
+      fullPath: '/budget'
+      preLoaderRoute: typeof BudgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BudgetRoute: BudgetRoute,
   CategoriesRoute: CategoriesRoute,
   SettingsRoute: SettingsRoute,
 }
