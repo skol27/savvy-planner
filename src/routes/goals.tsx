@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Check } from "lucide-react";
+import { useState } from "react";
 import { fmt, latestTrackedMonth, nwTotals, projectNetWorth } from "@/lib/finance/calc";
 
 export const Route = createFileRoute("/goals")({
@@ -15,13 +16,19 @@ export const Route = createFileRoute("/goals")({
 
 function GoalsPage() {
   const { goals, setGoals, nwPositions, settings, projection, extras } = useFinance();
+  const [edit, setEdit] = useState(false);
   const latest = latestTrackedMonth(nwPositions, settings.latestTrackedMode) || "2026-02";
   const nw = nwTotals(nwPositions, latest).net;
   const proj = projectNetWorth(projection, nw, extras, +latest.slice(0,4));
   return (
     <div className="flex flex-col">
       <PageHeader title="Goals" description="Net worth targets used by dashboards and projections." actions={
-        <Button size="sm" onClick={() => setGoals(p => [...p, { id: uid(), name: "New Goal", amount: 50000, show: true, type: "Custom" }])}><Plus className="h-3.5 w-3.5"/>Goal</Button>
+        <>
+          <Button size="sm" variant={edit ? "default" : "outline"} onClick={() => setEdit(e => !e)}>
+            {edit ? <><Check className="h-3.5 w-3.5"/>Done</> : <><Pencil className="h-3.5 w-3.5"/>Edit</>}
+          </Button>
+          {edit && <Button size="sm" onClick={() => setGoals(p => [...p, { id: uid(), name: "New Goal", amount: 50000, show: true, type: "Custom" }])}><Plus className="h-3.5 w-3.5"/>Goal</Button>}
+        </>
       }/>
       <div className="p-6">
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -37,12 +44,14 @@ function GoalsPage() {
               const reach = proj.find(p => p.nw >= g.amount);
               return (
                 <tr key={g.id} className="border-t">
-                  <td className="px-3 py-1.5"><Input value={g.name} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,name:e.target.value}:x))} className="h-8"/></td>
-                  <td className="px-3"><Select value={g.type} onValueChange={v=>setGoals(p=>p.map(x=>x.id===g.id?{...x,type:v as any}:x))}>
-                    <SelectTrigger className="h-8 w-32"><SelectValue/></SelectTrigger>
-                    <SelectContent><SelectItem value="NW">Net worth</SelectItem><SelectItem value="FIRE">FIRE</SelectItem><SelectItem value="Custom">Custom</SelectItem></SelectContent>
-                  </Select></td>
-                  <td className="px-3"><Input type="number" value={g.amount} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,amount:+e.target.value}:x))} className="h-8 num text-right w-32"/></td>
+                  <td className="px-3 py-1.5">{edit ? <Input value={g.name} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,name:e.target.value}:x))} className="h-8"/> : <span>{g.name}</span>}</td>
+                  <td className="px-3">{edit ? (
+                    <Select value={g.type} onValueChange={v=>setGoals(p=>p.map(x=>x.id===g.id?{...x,type:v as any}:x))}>
+                      <SelectTrigger className="h-8 w-32"><SelectValue/></SelectTrigger>
+                      <SelectContent><SelectItem value="NW">Net worth</SelectItem><SelectItem value="FIRE">FIRE</SelectItem><SelectItem value="Custom">Custom</SelectItem></SelectContent>
+                    </Select>
+                  ) : <span className="text-xs">{g.type}</span>}</td>
+                  <td className="px-3 text-right num">{edit ? <Input type="number" value={g.amount} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,amount:+e.target.value}:x))} className="h-8 num text-right w-32"/> : fmt(g.amount, 0)}</td>
                   <td className="px-3 text-right num">
                     <div className="inline-flex flex-col items-end">
                       <span>{pct.toFixed(0)}%</span>
@@ -52,9 +61,9 @@ function GoalsPage() {
                     </div>
                   </td>
                   <td className="px-3 text-right num">{reach?.year || "—"}</td>
-                  <td className="px-3"><Input type="date" value={g.targetDate || ""} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,targetDate:e.target.value}:x))} className="h-8 num"/></td>
-                  <td className="text-center"><Switch checked={g.show} onCheckedChange={v=>setGoals(p=>p.map(x=>x.id===g.id?{...x,show:v}:x))}/></td>
-                  <td><Button size="icon" variant="ghost" className="h-8 w-8" onClick={()=>setGoals(p=>p.filter(x=>x.id!==g.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button></td>
+                  <td className="px-3">{edit ? <Input type="date" value={g.targetDate || ""} onChange={e=>setGoals(p=>p.map(x=>x.id===g.id?{...x,targetDate:e.target.value}:x))} className="h-8 num"/> : <span className="num text-xs">{g.targetDate || "—"}</span>}</td>
+                  <td className="text-center"><Switch checked={g.show} disabled={!edit} onCheckedChange={v=>setGoals(p=>p.map(x=>x.id===g.id?{...x,show:v}:x))}/></td>
+                  <td>{edit && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={()=>setGoals(p=>p.filter(x=>x.id!==g.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button>}</td>
                 </tr>
               );
             })}</tbody>
