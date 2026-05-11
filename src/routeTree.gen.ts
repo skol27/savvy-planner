@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as NetworthDashboardRouteImport } from './routes/networth-dashboard'
 import { Route as NetworthRouteImport } from './routes/networth'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as BudgetDashboardRouteImport } from './routes/budget-dashboard'
@@ -25,6 +26,11 @@ const TransactionsRoute = TransactionsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NetworthDashboardRoute = NetworthDashboardRouteImport.update({
+  id: '/networth-dashboard',
+  path: '/networth-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NetworthRoute = NetworthRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
   '/settings': typeof SettingsRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/budget-dashboard'
     | '/categories'
     | '/networth'
+    | '/networth-dashboard'
     | '/settings'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/budget-dashboard'
     | '/categories'
     | '/networth'
+    | '/networth-dashboard'
     | '/settings'
     | '/transactions'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/budget-dashboard'
     | '/categories'
     | '/networth'
+    | '/networth-dashboard'
     | '/settings'
     | '/transactions'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   BudgetDashboardRoute: typeof BudgetDashboardRoute
   CategoriesRoute: typeof CategoriesRoute
   NetworthRoute: typeof NetworthRoute
+  NetworthDashboardRoute: typeof NetworthDashboardRoute
   SettingsRoute: typeof SettingsRoute
   TransactionsRoute: typeof TransactionsRoute
 }
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/networth-dashboard': {
+      id: '/networth-dashboard'
+      path: '/networth-dashboard'
+      fullPath: '/networth-dashboard'
+      preLoaderRoute: typeof NetworthDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/networth': {
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetDashboardRoute: BudgetDashboardRoute,
   CategoriesRoute: CategoriesRoute,
   NetworthRoute: NetworthRoute,
+  NetworthDashboardRoute: NetworthDashboardRoute,
   SettingsRoute: SettingsRoute,
   TransactionsRoute: TransactionsRoute,
 }
