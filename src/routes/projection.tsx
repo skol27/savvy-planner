@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, Pencil, Check } from "lucide-react";
 import { fmt, latestTrackedMonth, nwTotals, projectNetWorth } from "@/lib/finance/calc";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ComposedChart } from "recharts";
 import { useMemo, useState } from "react";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/projection")({
 function ProjectionPage() {
   const { projection, setProjection, extras, setExtras, nwPositions, settings, goals } = useFinance();
   const [comparison, setComparison] = useState<string>("CW vs. Actual Exp.");
+  const [editExtras, setEditExtras] = useState(false);
   const setP = (patch: Partial<typeof projection>) => setProjection({ ...projection, ...patch });
   const latest = latestTrackedMonth(nwPositions, settings.latestTrackedMode) || "2026-02";
   const startNW = nwTotals(nwPositions, latest).net;
@@ -111,7 +112,12 @@ function ProjectionPage() {
         <div className="rounded-lg border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b">
             <h3 className="text-sm font-semibold">Extra Cash Flows</h3>
-            <Button size="sm" variant="outline" onClick={() => setExtras(p => [...p, { id: uid(), label: "New", type: "Income", amount: 0, startYear, lastYear: startYear, growth: 0, include: true }])}><Plus className="h-3.5 w-3.5"/>Row</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant={editExtras ? "default" : "outline"} onClick={() => setEditExtras(e => !e)}>
+                {editExtras ? <><Check className="h-3.5 w-3.5"/>Done</> : <><Pencil className="h-3.5 w-3.5"/>Edit</>}
+              </Button>
+              {editExtras && <Button size="sm" variant="outline" onClick={() => setExtras(p => [...p, { id: uid(), label: "New", type: "Income", amount: 0, startYear, lastYear: startYear, growth: 0, include: true }])}><Plus className="h-3.5 w-3.5"/>Row</Button>}
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead className="bg-muted/30"><tr>
@@ -124,14 +130,14 @@ function ProjectionPage() {
               const invalid = e.lastYear < e.startYear;
               return (
                 <tr key={e.id} className="border-t">
-                  <td className="px-2 py-1"><Input value={e.label} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,label:ev.target.value}:x))} className="h-7 text-xs"/></td>
-                  <td className="px-2 py-1"><Select value={e.type} onValueChange={v=>setExtras(p=>p.map(x=>x.id===e.id?{...x,type:v as any}:x))}><SelectTrigger className="h-7 text-xs"><SelectValue/></SelectTrigger><SelectContent>{["Income","Expenses","Savings"].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></td>
-                  <td className="px-2 py-1"><Input type="number" value={e.amount} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,amount:+ev.target.value}:x))} className="h-7 text-xs num text-right"/></td>
-                  <td className="px-2 py-1"><Input type="number" value={e.startYear} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,startYear:+ev.target.value}:x))} className="h-7 text-xs num text-right w-24"/></td>
-                  <td className="px-2 py-1"><Input type="number" value={e.lastYear} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,lastYear:+ev.target.value}:x))} className={"h-7 text-xs num text-right w-24"+(invalid?" border-destructive":"")}/></td>
-                  <td className="px-2 py-1"><Input type="number" step="0.1" value={e.growth} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,growth:+ev.target.value}:x))} className="h-7 text-xs num text-right w-20"/></td>
-                  <td className="text-center"><Switch checked={e.include} onCheckedChange={v=>setExtras(p=>p.map(x=>x.id===e.id?{...x,include:v}:x))}/></td>
-                  <td><Button size="icon" variant="ghost" className="h-7 w-7" onClick={()=>setExtras(p=>p.filter(x=>x.id!==e.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button></td>
+                  <td className="px-2 py-1">{editExtras ? <Input value={e.label} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,label:ev.target.value}:x))} className="h-7 text-xs"/> : <span>{e.label}</span>}</td>
+                  <td className="px-2 py-1">{editExtras ? <Select value={e.type} onValueChange={v=>setExtras(p=>p.map(x=>x.id===e.id?{...x,type:v as any}:x))}><SelectTrigger className="h-7 text-xs"><SelectValue/></SelectTrigger><SelectContent>{["Income","Expenses","Savings"].map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select> : <span>{e.type}</span>}</td>
+                  <td className="px-2 py-1 text-right num">{editExtras ? <Input type="number" value={e.amount} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,amount:+ev.target.value}:x))} className="h-7 text-xs num text-right"/> : fmt(e.amount, 0)}</td>
+                  <td className="px-2 py-1 text-right num">{editExtras ? <Input type="number" value={e.startYear} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,startYear:+ev.target.value}:x))} className="h-7 text-xs num text-right w-24"/> : e.startYear}</td>
+                  <td className="px-2 py-1 text-right num">{editExtras ? <Input type="number" value={e.lastYear} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,lastYear:+ev.target.value}:x))} className={"h-7 text-xs num text-right w-24"+(invalid?" border-destructive":"")}/> : e.lastYear}</td>
+                  <td className="px-2 py-1 text-right num">{editExtras ? <Input type="number" step="0.1" value={e.growth} onChange={ev=>setExtras(p=>p.map(x=>x.id===e.id?{...x,growth:+ev.target.value}:x))} className="h-7 text-xs num text-right w-20"/> : `${e.growth}%`}</td>
+                  <td className="text-center"><Switch checked={e.include} disabled={!editExtras} onCheckedChange={v=>setExtras(p=>p.map(x=>x.id===e.id?{...x,include:v}:x))}/></td>
+                  <td>{editExtras && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={()=>setExtras(p=>p.filter(x=>x.id!==e.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button>}</td>
                 </tr>
               );
             })}</tbody>
