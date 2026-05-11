@@ -223,8 +223,8 @@ function BudgetDashboard() {
                 const totalT = items.reduce((a,b)=>a+b.tracked,0);
                 const totalB = items.reduce((a,b)=>a+b.budget,0);
                 return (
-                  <>
-                    <tr key={sec} className="bg-muted/20 border-t font-semibold">
+                  <React.Fragment key={sec}>
+                    <tr className="bg-muted/20 border-t font-semibold">
                       <td className="px-3 py-1.5"><Badge variant="outline">{sec}</Badge></td>
                       <td className="px-3 text-right num">{fmt(totalT)}</td>
                       <td className="px-3 text-right num">{fmt(totalB)}</td>
@@ -242,7 +242,7 @@ function BudgetDashboard() {
                         <td className={cn("px-3 text-right num", b.tracked>b.budget && "text-warning")}>{fmt(Math.max(0,b.tracked-b.budget))}</td>
                       </tr>
                     ))}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
