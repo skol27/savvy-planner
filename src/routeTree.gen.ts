@@ -13,6 +13,7 @@ import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as NetworthRouteImport } from './routes/networth'
 import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as BudgetDashboardRouteImport } from './routes/budget-dashboard'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -36,6 +37,11 @@ const CategoriesRoute = CategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BudgetDashboardRoute = BudgetDashboardRouteImport.update({
+  id: '/budget-dashboard',
+  path: '/budget-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetRoute = BudgetRouteImport.update({
   id: '/budget',
   path: '/budget',
@@ -50,6 +56,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
   '/settings': typeof SettingsRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
   '/settings': typeof SettingsRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
   '/networth': typeof NetworthRoute
   '/settings': typeof SettingsRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/budget'
+    | '/budget-dashboard'
     | '/categories'
     | '/networth'
     | '/settings'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/budget'
+    | '/budget-dashboard'
     | '/categories'
     | '/networth'
     | '/settings'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/budget'
+    | '/budget-dashboard'
     | '/categories'
     | '/networth'
     | '/settings'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BudgetRoute: typeof BudgetRoute
+  BudgetDashboardRoute: typeof BudgetDashboardRoute
   CategoriesRoute: typeof CategoriesRoute
   NetworthRoute: typeof NetworthRoute
   SettingsRoute: typeof SettingsRoute
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/budget-dashboard': {
+      id: '/budget-dashboard'
+      path: '/budget-dashboard'
+      fullPath: '/budget-dashboard'
+      preLoaderRoute: typeof BudgetDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budget': {
       id: '/budget'
       path: '/budget'
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BudgetRoute: BudgetRoute,
+  BudgetDashboardRoute: BudgetDashboardRoute,
   CategoriesRoute: CategoriesRoute,
   NetworthRoute: NetworthRoute,
   SettingsRoute: SettingsRoute,
