@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Pencil, Check } from "lucide-react";
 import { useState } from "react";
 import { fmt } from "@/lib/finance/calc";
 import type { BudgetSection } from "@/lib/finance/types";
@@ -23,6 +23,7 @@ function BudgetPage() {
   const { positions, setPositions, budgetCats, settings } = useFinance();
   const [year, setYear] = useState(settings.startingYear);
   const [view, setView] = useState<"Monthly"|"Annual"|"Horizon">("Monthly");
+  const [edit, setEdit] = useState(false);
   const sections: BudgetSection[] = ["Income","Expenses","Savings","Debt"];
   const sectionTotal = (sec: BudgetSection) => positions.filter(p => p.section === sec).reduce((a,p) => a + p.monthly.reduce((x,y)=>x+y,0), 0);
   const allocated = sectionTotal("Income") - sectionTotal("Expenses") - sectionTotal("Savings") - sectionTotal("Debt");
@@ -38,6 +39,9 @@ function BudgetPage() {
     <div className="flex flex-col">
       <PageHeader title="Budget Planner" description={`Plan ${year} across all categories`} actions={
         <>
+          <Button size="sm" variant={edit ? "default" : "outline"} onClick={() => setEdit(e => !e)}>
+            {edit ? <><Check className="h-3.5 w-3.5"/>Done</> : <><Pencil className="h-3.5 w-3.5"/>Edit</>}
+          </Button>
           <ToggleGroup type="single" size="sm" value={view} onValueChange={v => v && setView(v as any)}>
             <ToggleGroupItem value="Monthly">Monthly</ToggleGroupItem>
             <ToggleGroupItem value="Annual">Annual</ToggleGroupItem>
@@ -74,7 +78,7 @@ function BudgetPage() {
                   <Badge variant="outline" className="font-semibold">{sec}</Badge>
                   <span className="text-xs text-muted-foreground">{rows.length} positions • Annual {fmt(annualSec)}</span>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => addPosition(sec)}><Plus className="h-3.5 w-3.5"/>Position</Button>
+                {edit && <Button size="sm" variant="outline" onClick={() => addPosition(sec)}><Plus className="h-3.5 w-3.5"/>Position</Button>}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -93,20 +97,28 @@ function BudgetPage() {
                       return (
                         <tr key={p.id} className="border-t hover:bg-muted/20">
                           <td className="px-2 py-1">
-                            <Select value={p.categoryId} onValueChange={v => setPositions(prev => prev.map(x => x.id===p.id ? {...x, categoryId: v} : x))}>
-                              <SelectTrigger className={cn("h-7 text-xs", !matches && "border-destructive")}><SelectValue/></SelectTrigger>
-                              <SelectContent>{cats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                            </Select>
+                            {edit ? (
+                              <Select value={p.categoryId} onValueChange={v => setPositions(prev => prev.map(x => x.id===p.id ? {...x, categoryId: v} : x))}>
+                                <SelectTrigger className={cn("h-7 text-xs", !matches && "border-destructive")}><SelectValue/></SelectTrigger>
+                                <SelectContent>{cats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-xs">{cat?.name ?? "—"}</span>
+                            )}
                             {!matches && <div className="text-[10px] text-destructive mt-0.5">Wrong section</div>}
                           </td>
-                          <td className="px-2 py-1"><Input value={p.name} onChange={e => setPositions(prev => prev.map(x => x.id===p.id ? {...x, name: e.target.value} : x))} className="h-7 text-xs"/></td>
+                          <td className="px-2 py-1">{edit ? <Input value={p.name} onChange={e => setPositions(prev => prev.map(x => x.id===p.id ? {...x, name: e.target.value} : x))} className="h-7 text-xs"/> : <span className="text-xs">{p.name}</span>}</td>
                           {view === "Monthly" && p.monthly.map((v, i) => (
                             <td key={i} className="px-1 py-1">
-                              <Input type="number" value={v} onChange={e => setPositions(prev => prev.map(x => x.id===p.id ? {...x, monthly: x.monthly.map((mv, mi) => mi === i ? +e.target.value : mv)} : x))} className="h-7 text-xs num text-right px-1"/>
+                              {edit ? (
+                                <Input type="number" value={v} onChange={e => setPositions(prev => prev.map(x => x.id===p.id ? {...x, monthly: x.monthly.map((mv, mi) => mi === i ? +e.target.value : mv)} : x))} className="h-7 text-xs num text-right px-1"/>
+                              ) : (
+                                <div className="text-xs num text-right px-1">{fmt(v, 0)}</div>
+                              )}
                             </td>
                           ))}
                           <td className="px-2 py-1 text-right num font-semibold">{fmt(annual)}</td>
-                          <td><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPositions(prev => prev.filter(x => x.id !== p.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button></td>
+                          <td>{edit && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setPositions(prev => prev.filter(x => x.id !== p.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button>}</td>
                         </tr>
                       );
                     })}
