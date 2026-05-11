@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Check } from "lucide-react";
 import { useState } from "react";
 import { fmt, latestTrackedMonth, nwTotals } from "@/lib/finance/calc";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ function NWPage() {
   const { nwPositions, setNwPositions, assetCats, liabCats, settings } = useFinance();
   const months = monthsRange(settings.startingYear, settings.startingMonth, 24);
   const [from, setFrom] = useState(0);
+  const [edit, setEdit] = useState(false);
   const visible = months.slice(from, from + 6);
   const latest = latestTrackedMonth(nwPositions, settings.latestTrackedMode);
 
@@ -42,7 +43,7 @@ function NWPage() {
       <div className="rounded-lg border bg-card overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b bg-muted/30">
           <h3 className="text-sm font-semibold">{type === "Asset" ? "Assets" : "Liabilities"} <span className="text-xs text-muted-foreground font-normal">({rows.length})</span></h3>
-          <Button size="sm" variant="outline" onClick={() => addPos(type)}><Plus className="h-3.5 w-3.5"/>{type}</Button>
+          {edit && <Button size="sm" variant="outline" onClick={() => addPos(type)}><Plus className="h-3.5 w-3.5"/>{type}</Button>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -59,18 +60,24 @@ function NWPage() {
                 return (
                   <tr key={p.id} className="border-t hover:bg-muted/20">
                     <td className="px-2 py-1">
-                      <Select value={p.categoryId} onValueChange={v => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, categoryId: v} : x))}>
-                        <SelectTrigger className={cn("h-7 text-xs", !matches && "border-destructive")}><SelectValue/></SelectTrigger>
-                        <SelectContent>{cats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                      </Select>
+                      {edit ? (
+                        <Select value={p.categoryId} onValueChange={v => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, categoryId: v} : x))}>
+                          <SelectTrigger className={cn("h-7 text-xs", !matches && "border-destructive")}><SelectValue/></SelectTrigger>
+                          <SelectContent>{cats.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      ) : (<span className="text-xs">{cat?.name ?? "—"}</span>)}
                     </td>
-                    <td className="px-2 py-1"><Input value={p.name} onChange={e => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, name: e.target.value} : x))} className="h-7 text-xs"/></td>
+                    <td className="px-2 py-1">{edit ? <Input value={p.name} onChange={e => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, name: e.target.value} : x))} className="h-7 text-xs"/> : <span className="text-xs">{p.name}</span>}</td>
                     {visible.map(m => (
                       <td key={m} className="px-1 py-1">
-                        <Input type="number" value={p.balances[m] ?? ""} onChange={e => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, balances: { ...x.balances, [m]: e.target.value === "" ? 0 : +e.target.value }} : x))} className="h-7 text-xs num text-right px-1"/>
+                        {edit ? (
+                          <Input type="number" value={p.balances[m] ?? ""} onChange={e => setNwPositions(prev => prev.map(x => x.id===p.id ? {...x, balances: { ...x.balances, [m]: e.target.value === "" ? 0 : +e.target.value }} : x))} className="h-7 text-xs num text-right px-1"/>
+                        ) : (
+                          <div className="text-xs num text-right px-1">{p.balances[m] ? fmt(p.balances[m], 0) : "—"}</div>
+                        )}
                       </td>
                     ))}
-                    <td><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setNwPositions(prev => prev.filter(x => x.id !== p.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button></td>
+                    <td>{edit && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setNwPositions(prev => prev.filter(x => x.id !== p.id))}><Trash2 className="h-3.5 w-3.5 text-destructive"/></Button>}</td>
                   </tr>
                 );
               })}
@@ -94,6 +101,9 @@ function NWPage() {
     <div className="flex flex-col">
       <PageHeader title="Net Worth Tracker" description={`Latest tracked: ${latest || "—"} (${settings.latestTrackedMode} mode)`} actions={
         <>
+          <Button size="sm" variant={edit ? "default" : "outline"} onClick={() => setEdit(e => !e)}>
+            {edit ? <><Check className="h-3.5 w-3.5"/>Done</> : <><Pencil className="h-3.5 w-3.5"/>Edit</>}
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setFrom(Math.max(0, from - 6))}>← Earlier</Button>
           <Button size="sm" variant="outline" onClick={() => setFrom(Math.min(months.length - 6, from + 6))}>Later →</Button>
         </>
