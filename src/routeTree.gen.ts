@@ -9,8 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProjectionRouteImport } from './routes/projection'
+import { Route as NetworthDashboardRouteImport } from './routes/networth-dashboard'
+import { Route as NetworthRouteImport } from './routes/networth'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as GoalsRouteImport } from './routes/goals'
+import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as BudgetDashboardRouteImport } from './routes/budget-dashboard'
+import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TransactionsRoute = TransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectionRoute = ProjectionRouteImport.update({
+  id: '/projection',
+  path: '/projection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NetworthDashboardRoute = NetworthDashboardRouteImport.update({
+  id: '/networth-dashboard',
+  path: '/networth-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NetworthRoute = NetworthRouteImport.update({
+  id: '/networth',
+  path: '/networth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoalsRoute = GoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BudgetDashboardRoute = BudgetDashboardRouteImport.update({
+  id: '/budget-dashboard',
+  path: '/budget-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BudgetRoute = BudgetRouteImport.update({
+  id: '/budget',
+  path: '/budget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +79,172 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
+  '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
+  '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
+  '/projection': typeof ProjectionRoute
+  '/settings': typeof SettingsRoute
+  '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
+  '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
+  '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
+  '/projection': typeof ProjectionRoute
+  '/settings': typeof SettingsRoute
+  '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/budget': typeof BudgetRoute
+  '/budget-dashboard': typeof BudgetDashboardRoute
+  '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
+  '/networth': typeof NetworthRoute
+  '/networth-dashboard': typeof NetworthDashboardRoute
+  '/projection': typeof ProjectionRoute
+  '/settings': typeof SettingsRoute
+  '/transactions': typeof TransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/budget'
+    | '/budget-dashboard'
+    | '/categories'
+    | '/goals'
+    | '/help'
+    | '/networth'
+    | '/networth-dashboard'
+    | '/projection'
+    | '/settings'
+    | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/budget'
+    | '/budget-dashboard'
+    | '/categories'
+    | '/goals'
+    | '/help'
+    | '/networth'
+    | '/networth-dashboard'
+    | '/projection'
+    | '/settings'
+    | '/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/budget'
+    | '/budget-dashboard'
+    | '/categories'
+    | '/goals'
+    | '/help'
+    | '/networth'
+    | '/networth-dashboard'
+    | '/projection'
+    | '/settings'
+    | '/transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BudgetRoute: typeof BudgetRoute
+  BudgetDashboardRoute: typeof BudgetDashboardRoute
+  CategoriesRoute: typeof CategoriesRoute
+  GoalsRoute: typeof GoalsRoute
+  HelpRoute: typeof HelpRoute
+  NetworthRoute: typeof NetworthRoute
+  NetworthDashboardRoute: typeof NetworthDashboardRoute
+  ProjectionRoute: typeof ProjectionRoute
+  SettingsRoute: typeof SettingsRoute
+  TransactionsRoute: typeof TransactionsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transactions': {
+      id: '/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projection': {
+      id: '/projection'
+      path: '/projection'
+      fullPath: '/projection'
+      preLoaderRoute: typeof ProjectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/networth-dashboard': {
+      id: '/networth-dashboard'
+      path: '/networth-dashboard'
+      fullPath: '/networth-dashboard'
+      preLoaderRoute: typeof NetworthDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/networth': {
+      id: '/networth'
+      path: '/networth'
+      fullPath: '/networth'
+      preLoaderRoute: typeof NetworthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goals': {
+      id: '/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof GoalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/budget-dashboard': {
+      id: '/budget-dashboard'
+      path: '/budget-dashboard'
+      fullPath: '/budget-dashboard'
+      preLoaderRoute: typeof BudgetDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/budget': {
+      id: '/budget'
+      path: '/budget'
+      fullPath: '/budget'
+      preLoaderRoute: typeof BudgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +257,17 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BudgetRoute: BudgetRoute,
+  BudgetDashboardRoute: BudgetDashboardRoute,
+  CategoriesRoute: CategoriesRoute,
+  GoalsRoute: GoalsRoute,
+  HelpRoute: HelpRoute,
+  NetworthRoute: NetworthRoute,
+  NetworthDashboardRoute: NetworthDashboardRoute,
+  ProjectionRoute: ProjectionRoute,
+  SettingsRoute: SettingsRoute,
+  TransactionsRoute: TransactionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
