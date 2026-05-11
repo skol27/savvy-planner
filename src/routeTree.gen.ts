@@ -14,6 +14,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProjectionRouteImport } from './routes/projection'
 import { Route as NetworthDashboardRouteImport } from './routes/networth-dashboard'
 import { Route as NetworthRouteImport } from './routes/networth'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as BudgetDashboardRouteImport } from './routes/budget-dashboard'
 import { Route as BudgetRouteImport } from './routes/budget'
@@ -44,6 +46,16 @@ const NetworthRoute = NetworthRouteImport.update({
   path: '/networth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoalsRoute = GoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriesRoute = CategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
@@ -70,6 +82,8 @@ export interface FileRoutesByFullPath {
   '/budget': typeof BudgetRoute
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/networth': typeof NetworthRoute
   '/networth-dashboard': typeof NetworthDashboardRoute
   '/projection': typeof ProjectionRoute
@@ -81,6 +95,8 @@ export interface FileRoutesByTo {
   '/budget': typeof BudgetRoute
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/networth': typeof NetworthRoute
   '/networth-dashboard': typeof NetworthDashboardRoute
   '/projection': typeof ProjectionRoute
@@ -93,6 +109,8 @@ export interface FileRoutesById {
   '/budget': typeof BudgetRoute
   '/budget-dashboard': typeof BudgetDashboardRoute
   '/categories': typeof CategoriesRoute
+  '/goals': typeof GoalsRoute
+  '/help': typeof HelpRoute
   '/networth': typeof NetworthRoute
   '/networth-dashboard': typeof NetworthDashboardRoute
   '/projection': typeof ProjectionRoute
@@ -106,6 +124,8 @@ export interface FileRouteTypes {
     | '/budget'
     | '/budget-dashboard'
     | '/categories'
+    | '/goals'
+    | '/help'
     | '/networth'
     | '/networth-dashboard'
     | '/projection'
@@ -117,6 +137,8 @@ export interface FileRouteTypes {
     | '/budget'
     | '/budget-dashboard'
     | '/categories'
+    | '/goals'
+    | '/help'
     | '/networth'
     | '/networth-dashboard'
     | '/projection'
@@ -128,6 +150,8 @@ export interface FileRouteTypes {
     | '/budget'
     | '/budget-dashboard'
     | '/categories'
+    | '/goals'
+    | '/help'
     | '/networth'
     | '/networth-dashboard'
     | '/projection'
@@ -140,6 +164,8 @@ export interface RootRouteChildren {
   BudgetRoute: typeof BudgetRoute
   BudgetDashboardRoute: typeof BudgetDashboardRoute
   CategoriesRoute: typeof CategoriesRoute
+  GoalsRoute: typeof GoalsRoute
+  HelpRoute: typeof HelpRoute
   NetworthRoute: typeof NetworthRoute
   NetworthDashboardRoute: typeof NetworthDashboardRoute
   ProjectionRoute: typeof ProjectionRoute
@@ -184,6 +210,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goals': {
+      id: '/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof GoalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/categories': {
       id: '/categories'
       path: '/categories'
@@ -220,6 +260,8 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetRoute: BudgetRoute,
   BudgetDashboardRoute: BudgetDashboardRoute,
   CategoriesRoute: CategoriesRoute,
+  GoalsRoute: GoalsRoute,
+  HelpRoute: HelpRoute,
   NetworthRoute: NetworthRoute,
   NetworthDashboardRoute: NetworthDashboardRoute,
   ProjectionRoute: ProjectionRoute,
