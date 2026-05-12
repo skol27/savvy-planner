@@ -31,12 +31,19 @@ import {
   ArrowLeftRight,
   CircleDot,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fmt, effectiveDate } from "@/lib/finance/calc";
 import type { BudgetPosition, BudgetType, Transaction } from "@/lib/finance/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/transactions")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    type: typeof search.type === "string" ? search.type : undefined,
+    categoryId: typeof search.categoryId === "string" ? search.categoryId : undefined,
+    positionId: typeof search.positionId === "string" ? search.positionId : undefined,
+    from: typeof search.from === "string" ? search.from : undefined,
+    to: typeof search.to === "string" ? search.to : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Transactions — Ledger" },
@@ -220,10 +227,13 @@ const guessBudgetPosition = (
 };
 
 function TxPage() {
-  const { transactions, setTransactions, positions, nwPositions, settings } = useFinance();
+  const search = Route.useSearch();
+  const { transactions, setTransactions, positions, budgetCats, nwPositions, settings } =
+    useFinance();
   const [q, setQ] = useState("");
   const [filterAccount, setFilterAccount] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [filterPosition, setFilterPosition] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -238,22 +248,51 @@ function TxPage() {
   const [importDuplicateCount, setImportDuplicateCount] = useState(0);
   const [importError, setImportError] = useState("");
   const accounts = nwPositions.map((n) => n.name);
+  const categoryFilterOptions = budgetCats.filter(
+    (c) => filterType === "all" || c.section === filterType,
+  );
   const positionFilterOptions = positions.filter(
-    (p) => filterType === "all" || p.section === filterType,
+    (p) =>
+      (filterType === "all" || p.section === filterType) &&
+      (filterCategory === "all" || p.categoryId === filterCategory),
   );
   const currentImport = importQueue[importIndex];
+
+  useEffect(() => {
+    if (search.type && types.includes(search.type as BudgetType)) setFilterType(search.type);
+    if (search.categoryId) setFilterCategory(search.categoryId);
+    if (search.positionId) setFilterPosition(search.positionId);
+    if (search.from) setFrom(search.from);
+    if (search.to) setTo(search.to);
+  }, [search.type, search.categoryId, search.positionId, search.from, search.to]);
 
   const filtered = useMemo(() => {
     let r = [...transactions];
     if (q) r = r.filter((t) => t.details.toLowerCase().includes(q.toLowerCase()));
     if (filterAccount !== "all") r = r.filter((t) => t.account === filterAccount);
     if (filterType !== "all") r = r.filter((t) => t.budgetType === filterType);
+    if (filterCategory !== "all") {
+      const categoryPositionIds = new Set(
+        positions.filter((p) => p.categoryId === filterCategory).map((p) => p.id),
+      );
+      r = r.filter((t) => t.budgetPositionId && categoryPositionIds.has(t.budgetPositionId));
+    }
     if (filterPosition !== "all") r = r.filter((t) => t.budgetPositionId === filterPosition);
     if (from) r = r.filter((t) => t.date >= from);
     if (to) r = r.filter((t) => t.date <= to);
     r.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     return r;
-  }, [transactions, q, filterAccount, filterType, filterPosition, from, to]);
+  }, [
+    transactions,
+    q,
+    filterAccount,
+    filterType,
+    filterCategory,
+    filterPosition,
+    from,
+    to,
+    positions,
+  ]);
 
   const totalsByType = useMemo(() => {
     const m: Record<string, number> = {};
@@ -493,7 +532,7 @@ function TxPage() {
 
         {/* Filters */}
         <div className="rounded-lg border bg-card p-3">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
             <div className="md:col-span-2 relative">
               <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -516,7 +555,14 @@ function TxPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterType} onValueChange={setFilterType}>
+            <Select
+              value={filterType}
+              onValueChange={(value) => {
+                setFilterType(value);
+                setFilterCategory("all");
+                setFilterPosition("all");
+              }}
+            >
               <SelectTrigger className="h-8">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -525,6 +571,25 @@ function TxPage() {
                 {types.map((ty) => (
                   <SelectItem key={ty} value={ty}>
                     {ty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filterCategory}
+              onValueChange={(value) => {
+                setFilterCategory(value);
+                setFilterPosition("all");
+              }}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categoryFilterOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>

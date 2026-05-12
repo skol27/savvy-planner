@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useFinance } from "@/lib/finance/store";
 import { PageHeader } from "@/components/finance/PageHeader";
 import { KpiCard } from "@/components/finance/KpiCard";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
@@ -14,7 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import React, { useMemo, useState } from "react";
-import { budgetMonthValue, fmt, monthKey, effectiveDate } from "@/lib/finance/calc";
+import {
+  budgetMonthIndex,
+  budgetMonthValue,
+  fmt,
+  monthKey,
+  effectiveDate,
+} from "@/lib/finance/calc";
 import {
   ResponsiveContainer,
   PieChart,
@@ -32,6 +39,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import type { BudgetPosition, BudgetSection } from "@/lib/finance/types";
+import { RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/budget-dashboard")({
   head: () => ({
@@ -67,10 +75,28 @@ type BudgetPeriod = "Year" | "YTD" | "Month";
 type BudgetDetail = "Categories" | "Positions";
 type RateMode = "Expenses" | "Savings" | "Debt" | "Sav.+Debt";
 type AccountSort = "CF" | "Tx" | "Vol" | "Net";
+type BreakdownItem = {
+  id: string;
+  name: string;
+  tracked: number;
+  budget: number;
+  kind: "category" | "position";
+  categoryId?: string;
+  positionIds: string[];
+};
 
 function BudgetDashboard() {
-  const { positions, transactions, budgetCats, settings, nwPositions, assetCats, liabCats } =
-    useFinance();
+  const navigate = useNavigate();
+  const {
+    positions,
+    setPositions,
+    transactions,
+    budgetCats,
+    settings,
+    nwPositions,
+    assetCats,
+    liabCats,
+  } = useFinance();
   const today = new Date();
   const currentYear =
     today.getFullYear() >= settings.startingYear && today.getFullYear() < settings.startingYear + 10
@@ -112,6 +138,12 @@ function BudgetDashboard() {
       : period === "YTD"
         ? `${year}-${String(selectedPeriodMonths[selectedPeriodMonths.length - 1]).padStart(2, "0")}`
         : `${year}-12`;
+  const rangeStartMonth = selectedPeriodMonths[0] || selectedMonth;
+  const rangeEndMonth = selectedPeriodMonths[selectedPeriodMonths.length - 1] || selectedMonth;
+  const txFromDate = `${year}-${String(rangeStartMonth).padStart(2, "0")}-01`;
+  const txToDate = `${year}-${String(rangeEndMonth).padStart(2, "0")}-${String(
+    new Date(year, rangeEndMonth, 0).getDate(),
+  ).padStart(2, "0")}`;
   const focusValue =
     period === "Month"
       ? `${MONTHS[selectedMonth - 1]} ${year}`
@@ -156,7 +188,17 @@ function BudgetDashboard() {
   const balance = income - expenses - savings - debt;
   const planBalance = planIncome - planExpenses - planSavings - planDebt;
 
-  const breakdown = (sec: BudgetSection) => {
+  const positionTrackedForMonth = (positionId: string, month: number) => {
+    const mk = `${year}-${String(month).padStart(2, "0")}`;
+    return transactions
+      .filter((t) => {
+        if (t.budgetPositionId !== positionId) return false;
+        return monthKey(effectiveDate(t.date, settings, t.budgetType)) === mk;
+      })
+      .reduce((a, t) => a + Math.abs(t.amount), 0);
+  };
+
+  const breakdown = (sec: BudgetSection): BreakdownItem[] => {
     const pos = positions.filter((p) => p.section === sec);
     if (detail === "Positions") {
       return pos.map((p) => {
@@ -164,23 +206,87 @@ function BudgetDashboard() {
           .filter((t) => t.budgetPositionId === p.id)
           .reduce((a, t) => a + Math.abs(t.amount), 0);
         const budget = budgetForPosition(p);
-        return { id: p.id, name: p.name, tracked, budget };
+        return {
+          id: p.id,
+          name: p.name,
+          tracked,
+          budget,
+          kind: "position",
+          categoryId: p.categoryId,
+          positionIds: [p.id],
+        };
       });
     }
-    const groups = new Map<string, { name: string; tracked: number; budget: number }>();
+    const groups = new Map<string, BreakdownItem>();
     pos.forEach((p) => {
       const c = budgetCats.find((c) => c.id === p.categoryId);
-      const k = c?.name || "—";
+      const k = p.categoryId;
       const tracked = inPeriod
         .filter((t) => t.budgetPositionId === p.id)
         .reduce((a, t) => a + Math.abs(t.amount), 0);
       const budget = budgetForPosition(p);
-      const cur = groups.get(k) || { name: k, tracked: 0, budget: 0 };
+      const cur = groups.get(k) || {
+        id: k,
+        name: c?.name || "—",
+        tracked: 0,
+        budget: 0,
+        kind: "category",
+        categoryId: p.categoryId,
+        positionIds: [],
+      };
       cur.tracked += tracked;
       cur.budget += budget;
+      cur.positionIds.push(p.id);
       groups.set(k, cur);
     });
     return [...groups.values()];
+  };
+
+  const openTransactions = (sec: BudgetSection, item: BreakdownItem) => {
+    void navigate({
+      to: "/transactions",
+      search: {
+        type: sec,
+        categoryId: item.kind === "category" ? item.categoryId : undefined,
+        positionId: item.kind === "position" ? item.id : undefined,
+        from: txFromDate,
+        to: txToDate,
+      },
+    });
+  };
+
+  const syncPositions = (sec: BudgetSection, positionIds: string[], label: string) => {
+    const targetIds = new Set(positionIds);
+    const periodLabel =
+      period === "Month" ? `${MONTHS[selectedMonth - 1]} ${year}` : `${period} ${year}`;
+    if (
+      !window.confirm(
+        `Sync ${label} budget values to tracked values for ${periodLabel}? This updates Budget Planner values for the selected period.`,
+      )
+    ) {
+      return;
+    }
+    setPositions((prev) =>
+      prev.map((p) => {
+        if (p.section !== sec || !targetIds.has(p.id)) return p;
+        const monthly = [...p.monthly];
+        selectedPeriodMonths.forEach((month) => {
+          const index = budgetMonthIndex(settings, year, month);
+          if (index >= 0 && index < monthly.length) {
+            monthly[index] = positionTrackedForMonth(p.id, month);
+          }
+        });
+        return { ...p, monthly };
+      }),
+    );
+  };
+
+  const syncSection = (sec: BudgetSection) => {
+    syncPositions(
+      sec,
+      positions.filter((p) => p.section === sec).map((p) => p.id),
+      sec.toLowerCase(),
+    );
   };
 
   const allMonths = Array.from({ length: 12 }, (_, i) => i);
@@ -286,7 +392,15 @@ function BudgetDashboard() {
             : b.net - a.net,
     );
 
-  const Donut = ({ data, title }: { data: { name: string; value: number }[]; title: string }) => (
+  const Donut = ({
+    data,
+    title,
+    section,
+  }: {
+    data: (BreakdownItem & { value: number })[];
+    title: string;
+    section: BudgetSection;
+  }) => (
     <div className="rounded-lg border bg-card p-3">
       <div className="text-xs font-semibold mb-1">{title}</div>
       {data.length === 0 || data.every((d) => d.value === 0) ? (
@@ -303,12 +417,15 @@ function BudgetDashboard() {
               innerRadius={40}
               outerRadius={70}
               paddingAngle={2}
+              onClick={(item) => openTransactions(section, item as BreakdownItem)}
+              className="cursor-pointer"
             >
               {data.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip
+              formatter={(value) => fmt(Number(value))}
               contentStyle={{
                 background: "var(--color-card)",
                 border: "1px solid var(--color-border)",
@@ -324,7 +441,7 @@ function BudgetDashboard() {
   const allocFor = (sec: BudgetSection) =>
     breakdown(sec)
       .filter((b) => b.tracked > 0)
-      .map((b) => ({ name: b.name, value: b.tracked }));
+      .map((b) => ({ ...b, value: b.tracked }));
 
   return (
     <div className="flex flex-col">
@@ -400,10 +517,18 @@ function BudgetDashboard() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Donut data={allocFor("Income")} title="Income Allocation (Tracked)" />
-          <Donut data={allocFor("Expenses")} title="Expenses Allocation (Tracked)" />
-          <Donut data={allocFor("Savings")} title="Savings Allocation (Tracked)" />
-          <Donut data={allocFor("Debt")} title="Debt Allocation (Tracked)" />
+          <Donut data={allocFor("Income")} title="Income Allocation (Tracked)" section="Income" />
+          <Donut
+            data={allocFor("Expenses")}
+            title="Expenses Allocation (Tracked)"
+            section="Expenses"
+          />
+          <Donut
+            data={allocFor("Savings")}
+            title="Savings Allocation (Tracked)"
+            section="Savings"
+          />
+          <Donut data={allocFor("Debt")} title="Debt Allocation (Tracked)" section="Debt" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -427,8 +552,9 @@ function BudgetDashboard() {
               <BarChart data={trackVsBudget}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => fmt(Number(value))} />
                 <Tooltip
+                  formatter={(value) => fmt(Number(value))}
                   contentStyle={{
                     background: "var(--color-card)",
                     border: "1px solid var(--color-border)",
@@ -472,8 +598,13 @@ function BudgetDashboard() {
               <LineChart data={rates}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} unit="%" />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  unit="%"
+                  tickFormatter={(value) => fmt(Number(value))}
+                />
                 <Tooltip
+                  formatter={(value) => `${fmt(Number(value))}%`}
                   contentStyle={{
                     background: "var(--color-card)",
                     border: "1px solid var(--color-border)",
@@ -489,6 +620,20 @@ function BudgetDashboard() {
         <div className="rounded-lg border bg-card overflow-hidden">
           <div className="flex items-center justify-between p-3 border-b">
             <h3 className="text-sm font-semibold">Breakdown — {detail}</h3>
+            <div className="flex flex-wrap gap-2">
+              {(["Income", "Expenses", "Savings", "Debt"] as BudgetSection[]).map((sec) => (
+                <Button
+                  key={sec}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => syncSection(sec)}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Sync {sec.toLowerCase()}
+                </Button>
+              ))}
+            </div>
           </div>
           <table className="w-full text-xs">
             <thead className="bg-muted/30">
@@ -510,9 +655,19 @@ function BudgetDashboard() {
                   <React.Fragment key={sec}>
                     <tr className="bg-muted/20 border-t font-semibold">
                       <td className="px-3 py-1.5">
-                        <Badge variant="outline" className={sectionColor[sec]}>
-                          {sec}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={sectionColor[sec]}>
+                            {sec}
+                          </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => syncSection(sec)}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                       <td className={cn("px-3 text-right num", sectionColor[sec])}>
                         {fmt(totalT)}
@@ -532,7 +687,25 @@ function BudgetDashboard() {
                     </tr>
                     {items.map((b, i) => (
                       <tr key={`${sec}-${i}`} className="border-t hover:bg-muted/10">
-                        <td className="px-3 py-1 pl-8 text-muted-foreground">{b.name}</td>
+                        <td className="px-3 py-1 pl-8 text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="text-left hover:text-foreground hover:underline"
+                              onClick={() => openTransactions(sec, b)}
+                            >
+                              {b.name}
+                            </button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => syncPositions(sec, b.positionIds, b.name)}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
                         <td className={cn("px-3 text-right num", sectionColor[sec])}>
                           {fmt(b.tracked)}
                         </td>

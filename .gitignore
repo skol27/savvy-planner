@@ -16,6 +16,10 @@ dist-ssr
 .nitro
 *.local
 
+# Local Savvy Planner user data
+data/finance-state.json
+data/backups/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

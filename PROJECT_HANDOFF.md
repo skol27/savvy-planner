@@ -1,6 +1,6 @@
 # Savvy Planner Project Handoff
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 ## Purpose
 
@@ -42,12 +42,16 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Includes workbook settings, categories, budget positions, net worth positions, transactions, projection assumptions, extra cash flows, and goals.
 - `src/lib/finance/store.tsx`
   - Replaced mock store with workbook-seeded state.
-  - Adds local persistence with key `savvy-planner-finance-state-v1`.
-  - User changes persist in browser `localStorage` for the same origin, currently `http://127.0.0.1:4300`.
+  - Hydrates state from local file API first, browser `localStorage` second, workbook seed data third.
+  - Keeps browser fallback persistence with key `savvy-planner-finance-state-v1`.
+  - Exposes backup export/import and persistence status to routes.
+- `src/lib/finance/persistence.ts`
+  - Defines the typed persisted finance state, backup envelope, schema version, validation helpers, and backup filename helper.
 - `src/lib/finance/calc.ts`
   - Added budget month/year helpers for 10-year arrays.
   - Improved latest tracked month handling.
   - Improved projection logic.
+  - `fmt` rounds displayed whole-number values and applies thousands separators.
 - `src/lib/finance/types.ts`
   - Adjusted comments/types around 10-year budget monthly values.
 
@@ -68,6 +72,8 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Period Completion displays percent of days left in selected month.
   - Dashboard toggles and account filters work against actual data.
   - Breakdown table section values are color-coded.
+  - Allocation chart segments and breakdown item names drill into Transactions with matching type/category or position and selected period date filters.
+  - Breakdown table includes sync buttons for each budget section and each row. Sync asks for confirmation, then updates Budget Planner monthly values to match tracked values for the selected dashboard period.
 - `src/routes/networth.tsx`
   - Added workbook-style month status logic.
   - Fixed edit fields by storing balance drafts as strings and committing on blur or Done.
@@ -76,6 +82,7 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Sorting applies to grouped rows.
 - `src/routes/transactions.tsx`
   - Added account/type/budget-position filters.
+  - Added category filter and URL search params so dashboard drilldowns can pre-filter transactions.
   - Transaction date entry uses `dd.mm.yyyy` display/input, while stored dates remain ISO `yyyy-mm-dd`.
   - Add dialog defaults type to Expenses.
   - Amount field starts blank instead of `0`.
@@ -89,12 +96,19 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Imported expenses are saved as negative rounded whole numbers; imported income is saved as positive rounded whole numbers.
   - Import detects duplicates against existing transactions and within the uploaded file, skips duplicate rows, then reviews each new entry one by one before adding.
   - Import detects date, amount/type, merchant/details, and gives an initial budget-position guess where possible.
+- `src/routes/settings.tsx`
+  - Adds Data Backup controls.
+  - Exports the full current finance state to a versioned JSON backup.
+  - Imports a versioned JSON backup after previewing metadata and confirming overwrite.
+  - Shows whether file persistence is saved, saving, or using browser fallback.
 
 ### Independent access
 
 - `scripts/serve-built.mjs`
   - Custom local server for the built TanStack Start/Worker app.
   - Serves `/assets/*` from `dist/client` and sends app routes to `dist/server/index.js`.
+  - Adds `GET /api/state` and `PUT /api/state` for local JSON file persistence.
+  - Saves the default state file at `data/finance-state.json`, overrideable with `SAVVY_PLANNER_STATE_FILE`.
   - Needed because serving `dist/client` directly shows a directory listing and Vite/Wrangler hit local environment issues.
 - `Start Savvy Planner.command`
   - Double-click macOS launcher.
@@ -164,19 +178,35 @@ From `Ultimate Personal Finance Suite.xlsx`:
 
 ## Persistence Model
 
-Current persistence is browser `localStorage` only.
+Current persistence has two layers:
 
-- Good:
-  - User edits persist across page refreshes and app restarts.
-  - Works independently of Codex if the local server is started.
-- Limitations:
-  - Data is tied to browser + origin, currently `http://127.0.0.1:4300`.
-  - Clearing browser data loses edits.
-  - Changing browser, host, or port can make data appear missing.
-  - Data is not yet saved to a repo file or database.
-- Recommended next improvement:
-  - Add export/import backup first.
-  - Then optionally add a small local JSON or SQLite persistence layer if the user wants file-backed data.
+1. Local file persistence through the built-app runner:
+   - `GET /api/state` reads the saved backup envelope.
+   - `PUT /api/state` writes the saved backup envelope atomically.
+   - Default file: `data/finance-state.json`.
+   - Override path: `SAVVY_PLANNER_STATE_FILE=/path/to/file.json`.
+   - The file is ignored by Git.
+2. Browser fallback persistence:
+   - Key: `savvy-planner-finance-state-v1`.
+   - Still used if the local API is unavailable.
+
+Hydration order:
+
+1. Local file state.
+2. Browser `localStorage`.
+3. Workbook seed data.
+
+Backup/restore:
+
+- Settings includes Export Backup and Import Backup.
+- Backups use app id `savvy-planner` and schema version `1`.
+- Import previews export date, transaction count, budget position count, and net worth position count before replacing current state.
+
+Limitations:
+
+- File persistence only works through `scripts/serve-built.mjs`; static serving or unsupported dev runners will fall back to browser storage.
+- There is not yet a historical backup rotation system for automatic saves.
+- There is no SQLite/database layer yet.
 
 ## How To Run Independently
 
@@ -206,6 +236,19 @@ If dependencies are missing or the build is stale, run the app's build flow befo
   - `/private/tmp/bun/bin/bunx tsc --noEmit`
   - `/private/tmp/bun/bin/bunx eslint src/routes/transactions.tsx`
   - `/private/tmp/bun/bin/bun --bun run build`
+- Latest focused validation after backup/file persistence changes:
+  - `/private/tmp/bun/bin/bunx prettier --write src/lib/finance/persistence.ts src/lib/finance/store.tsx src/routes/settings.tsx scripts/serve-built.mjs`
+  - `/private/tmp/bun/bin/bunx tsc --noEmit`
+  - `/private/tmp/bun/bin/bunx eslint src/lib/finance/persistence.ts src/lib/finance/store.tsx src/routes/settings.tsx`
+  - `/private/tmp/bun/bin/bun --bun run build`
+  - `GET /api/state` returned `204` when no state file existed.
+  - `PUT /api/state` and readback succeeded against a temporary state file using `SAVVY_PLANNER_STATE_FILE=/private/tmp/savvy-planner-test-state.json`.
+- Latest focused validation after `to do.md` changes:
+  - `/private/tmp/bun/bin/bunx prettier --write src/lib/finance/calc.ts src/routes/budget-dashboard.tsx src/routes/transactions.tsx`
+  - `/private/tmp/bun/bin/bunx tsc --noEmit`
+  - `/private/tmp/bun/bin/bunx eslint src/lib/finance/calc.ts src/routes/budget-dashboard.tsx src/routes/transactions.tsx src/routes/index.tsx`
+  - `/private/tmp/bun/bin/bun --bun run build`
+  - Restarted built app at `http://127.0.0.1:4300/`.
 - Full repo lint has many pre-existing formatting errors in untouched files, so do not treat full lint failure as necessarily introduced by this work.
 - The built app was verified at `http://127.0.0.1:4300/` using the custom local runner.
 

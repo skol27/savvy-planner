@@ -128,7 +128,16 @@ function OverviewPage() {
         actions={
           <>
             <Button asChild size="sm" variant="outline">
-              <Link to="/transactions">
+              <Link
+                to="/transactions"
+                search={{
+                  type: undefined,
+                  categoryId: undefined,
+                  positionId: undefined,
+                  from: undefined,
+                  to: undefined,
+                }}
+              >
                 <Plus className="h-3.5 w-3.5" />
                 Tx
               </Link>

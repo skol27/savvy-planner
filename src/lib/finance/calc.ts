@@ -12,7 +12,10 @@ import type {
 
 export const fmt = (n: number, dec = 0) =>
   (n < 0 ? "-" : "") +
-  Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  Math.abs(dec === 0 ? Math.round(n) : n).toLocaleString("en-US", {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
+  });
 export const money = (n: number) => fmt(n, 0);
 export const pct = (n: number, dec = 1) => `${(n * 100).toFixed(dec)}%`;
 

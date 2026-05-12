@@ -1,13 +1,14 @@
 import { createReadStream, existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { dirname, extname, join, normalize } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import worker from "../dist/server/index.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const clientDir = join(root, "dist/client");
+const stateFile = process.env.SAVVY_PLANNER_STATE_FILE || join(root, "data/finance-state.json");
 const port = Number(process.env.PORT || 4300);
 const host = process.env.HOST || "127.0.0.1";
 
@@ -40,6 +41,70 @@ async function serveAsset(req, res) {
   createReadStream(file).pipe(res);
 }
 
+async function readRequestBody(req) {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function writeJson(res, status, value) {
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(value));
+}
+
+function isBackup(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    value.app === "savvy-planner" &&
+    value.schemaVersion === 1 &&
+    typeof value.exportedAt === "string" &&
+    value.state &&
+    typeof value.state === "object"
+  );
+}
+
+async function serveStateApi(req, res) {
+  if (req.method === "GET") {
+    if (!existsSync(stateFile)) {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    createReadStream(stateFile).pipe(res);
+    return;
+  }
+
+  if (req.method === "PUT") {
+    const body = await readRequestBody(req);
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      writeJson(res, 400, { error: "Invalid JSON." });
+      return;
+    }
+
+    if (!isBackup(parsed)) {
+      writeJson(res, 400, { error: "Invalid Savvy Planner backup." });
+      return;
+    }
+
+    await mkdir(dirname(stateFile), { recursive: true });
+    const tmpFile = `${stateFile}.tmp`;
+    await writeFile(tmpFile, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+    await rename(tmpFile, stateFile);
+    writeJson(res, 200, { ok: true });
+    return;
+  }
+
+  res.writeHead(405, { allow: "GET, PUT" });
+  res.end("Method not allowed");
+}
+
 async function serveWorker(req, res) {
   const url = `http://${req.headers.host}${req.url}`;
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : req;
@@ -61,7 +126,9 @@ async function serveWorker(req, res) {
 createServer(async (req, res) => {
   try {
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
-    if (pathname.startsWith("/assets/") || pathname === "/.assetsignore") {
+    if (pathname === "/api/state") {
+      await serveStateApi(req, res);
+    } else if (pathname.startsWith("/assets/") || pathname === "/.assetsignore") {
       await serveAsset(req, res);
     } else {
       await serveWorker(req, res);
