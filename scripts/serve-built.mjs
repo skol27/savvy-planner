@@ -9,6 +9,7 @@ import worker from "../dist/server/index.js";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const clientDir = join(root, "dist/client");
 const stateFile = process.env.SAVVY_PLANNER_STATE_FILE || join(root, "data/finance-state.json");
+const backupDir = process.env.SAVVY_PLANNER_BACKUP_DIR || join(dirname(stateFile), "backups");
 const port = Number(process.env.PORT || 4300);
 const host = process.env.HOST || "127.0.0.1";
 
@@ -66,6 +67,18 @@ function isBackup(value) {
   );
 }
 
+function backupFileName(backup) {
+  const stamp = String(backup.exportedAt || new Date().toISOString()).replace(/[:.]/g, "-");
+  const reason =
+    typeof backup.reason === "string"
+      ? `-${backup.reason
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}`
+      : "";
+  return `savvy-planner-backup-${stamp}${reason}.json`;
+}
+
 async function serveStateApi(req, res) {
   if (req.method === "GET") {
     if (!existsSync(stateFile)) {
@@ -105,6 +118,35 @@ async function serveStateApi(req, res) {
   res.end("Method not allowed");
 }
 
+async function serveBackupApi(req, res) {
+  if (req.method !== "POST") {
+    res.writeHead(405, { allow: "POST" });
+    res.end("Method not allowed");
+    return;
+  }
+
+  const body = await readRequestBody(req);
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    writeJson(res, 400, { error: "Invalid JSON." });
+    return;
+  }
+
+  if (!isBackup(parsed)) {
+    writeJson(res, 400, { error: "Invalid Savvy Planner backup." });
+    return;
+  }
+
+  await mkdir(backupDir, { recursive: true });
+  const file = join(backupDir, backupFileName(parsed));
+  const tmpFile = `${file}.tmp`;
+  await writeFile(tmpFile, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+  await rename(tmpFile, file);
+  writeJson(res, 200, { ok: true, file });
+}
+
 async function serveWorker(req, res) {
   const url = `http://${req.headers.host}${req.url}`;
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : req;
@@ -128,6 +170,8 @@ createServer(async (req, res) => {
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
     if (pathname === "/api/state") {
       await serveStateApi(req, res);
+    } else if (pathname === "/api/backups") {
+      await serveBackupApi(req, res);
     } else if (pathname.startsWith("/assets/") || pathname === "/.assetsignore") {
       await serveAsset(req, res);
     } else {

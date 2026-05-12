@@ -228,8 +228,15 @@ const guessBudgetPosition = (
 
 function TxPage() {
   const search = Route.useSearch();
-  const { transactions, setTransactions, positions, budgetCats, nwPositions, settings } =
-    useFinance();
+  const {
+    transactions,
+    setTransactions,
+    positions,
+    budgetCats,
+    nwPositions,
+    settings,
+    createBackupSnapshot,
+  } = useFinance();
   const [q, setQ] = useState("");
   const [filterAccount, setFilterAccount] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -247,6 +254,7 @@ function TxPage() {
   const [importIndex, setImportIndex] = useState(0);
   const [importDuplicateCount, setImportDuplicateCount] = useState(0);
   const [importError, setImportError] = useState("");
+  const importBackupCreated = useRef(false);
   const accounts = nwPositions.map((n) => n.name);
   const categoryFilterOptions = budgetCats.filter(
     (c) => filterType === "all" || c.section === filterType,
@@ -446,6 +454,7 @@ function TxPage() {
     setImportDuplicateCount(parsed.length - newRows.length);
     setImportQueue(newRows);
     setImportIndex(0);
+    importBackupCreated.current = false;
     setImportOpen(true);
     if (newRows.length === 0) {
       setImportError(
@@ -464,15 +473,24 @@ function TxPage() {
     );
   };
 
-  const finishCurrentImport = (add: boolean) => {
+  const finishCurrentImport = async (add: boolean) => {
     if (!currentImport) return;
     if (add) {
+      if (!importBackupCreated.current) {
+        const backedUp = await createBackupSnapshot("before-csv-import");
+        if (!backedUp) {
+          window.alert("Import stopped. Automatic backup could not be written.");
+          return;
+        }
+        importBackupCreated.current = true;
+      }
       setTransactions((prev) => [{ ...currentImport.tx, id: uid() }, ...prev]);
     }
     if (importIndex + 1 >= importQueue.length) {
       setImportOpen(false);
       setImportQueue([]);
       setImportIndex(0);
+      importBackupCreated.current = false;
       return;
     }
     setImportIndex((i) => i + 1);
@@ -1045,10 +1063,10 @@ function TxPage() {
             </Button>
             {currentImport && !importError && (
               <>
-                <Button variant="outline" onClick={() => finishCurrentImport(false)}>
+                <Button variant="outline" onClick={() => void finishCurrentImport(false)}>
                   Skip
                 </Button>
-                <Button onClick={() => finishCurrentImport(true)}>Add & Next</Button>
+                <Button onClick={() => void finishCurrentImport(true)}>Add & Next</Button>
               </>
             )}
           </DialogFooter>

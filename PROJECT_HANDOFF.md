@@ -96,10 +96,12 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Imported expenses are saved as negative rounded whole numbers; imported income is saved as positive rounded whole numbers.
   - Import detects duplicates against existing transactions and within the uploaded file, skips duplicate rows, then reviews each new entry one by one before adding.
   - Import detects date, amount/type, merchant/details, and gives an initial budget-position guess where possible.
+  - CSV import writes an automatic timestamped backup before adding the first reviewed imported transaction.
 - `src/routes/settings.tsx`
   - Adds Data Backup controls.
   - Exports the full current finance state to a versioned JSON backup.
   - Imports a versioned JSON backup after previewing metadata and confirming overwrite.
+  - Writes an automatic timestamped backup before replacing state through import.
   - Shows whether file persistence is saved, saving, or using browser fallback.
 
 ### Independent access
@@ -108,7 +110,9 @@ This repo is the new frontend implementation of the user's Excel budget workbook
   - Custom local server for the built TanStack Start/Worker app.
   - Serves `/assets/*` from `dist/client` and sends app routes to `dist/server/index.js`.
   - Adds `GET /api/state` and `PUT /api/state` for local JSON file persistence.
+  - Adds `POST /api/backups` for automatic timestamped backup snapshots.
   - Saves the default state file at `data/finance-state.json`, overrideable with `SAVVY_PLANNER_STATE_FILE`.
+  - Saves automatic backups under `data/backups/`, overrideable with `SAVVY_PLANNER_BACKUP_DIR`.
   - Needed because serving `dist/client` directly shows a directory listing and Vite/Wrangler hit local environment issues.
 - `Start Savvy Planner.command`
   - Double-click macOS launcher.
@@ -201,11 +205,13 @@ Backup/restore:
 - Settings includes Export Backup and Import Backup.
 - Backups use app id `savvy-planner` and schema version `1`.
 - Import previews export date, transaction count, budget position count, and net worth position count before replacing current state.
+- Automatic backups are written before Settings import, CSV import add, and Budget Dashboard sync.
+- If an automatic backup cannot be written, the triggering action is stopped instead of mutating data.
 
 Limitations:
 
 - File persistence only works through `scripts/serve-built.mjs`; static serving or unsupported dev runners will fall back to browser storage.
-- There is not yet a historical backup rotation system for automatic saves.
+- There is not yet backup pruning/rotation, so `data/backups/` can grow over time.
 - There is no SQLite/database layer yet.
 
 ## How To Run Independently
@@ -248,6 +254,14 @@ If dependencies are missing or the build is stale, run the app's build flow befo
   - `/private/tmp/bun/bin/bunx tsc --noEmit`
   - `/private/tmp/bun/bin/bunx eslint src/lib/finance/calc.ts src/routes/budget-dashboard.tsx src/routes/transactions.tsx src/routes/index.tsx`
   - `/private/tmp/bun/bin/bun --bun run build`
+  - Restarted built app at `http://127.0.0.1:4300/`.
+- Latest focused validation after automatic backup snapshots:
+  - `/private/tmp/bun/bin/bunx prettier --write scripts/serve-built.mjs src/lib/finance/persistence.ts src/lib/finance/store.tsx src/routes/settings.tsx src/routes/budget-dashboard.tsx src/routes/transactions.tsx`
+  - `/private/tmp/bun/bin/bunx tsc --noEmit`
+  - `/private/tmp/bun/bin/bunx eslint scripts/serve-built.mjs src/lib/finance/persistence.ts src/lib/finance/store.tsx src/routes/settings.tsx src/routes/budget-dashboard.tsx src/routes/transactions.tsx`
+  - `/private/tmp/bun/bin/bun --bun run build`
+  - `POST /api/backups` accepted a valid backup and wrote a temporary file under `/private/tmp/backups`.
+  - `POST /api/backups` rejected an invalid backup with `400`.
   - Restarted built app at `http://127.0.0.1:4300/`.
 - Full repo lint has many pre-existing formatting errors in untouched files, so do not treat full lint failure as necessarily introduced by this work.
 - The built app was verified at `http://127.0.0.1:4300/` using the custom local runner.

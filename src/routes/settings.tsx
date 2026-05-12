@@ -63,6 +63,7 @@ function SettingsPage() {
     setSettings,
     exportBackup,
     importState,
+    createBackupSnapshot,
     persistenceStatus,
     persistenceMessage,
   } = useFinance();
@@ -104,8 +105,13 @@ function SettingsPage() {
     }
   };
 
-  const confirmImport = () => {
+  const confirmImport = async () => {
     if (!pendingBackup) return;
+    const backedUp = await createBackupSnapshot("before-settings-import");
+    if (!backedUp) {
+      toast.error("Import stopped. Automatic backup could not be written.");
+      return;
+    }
     importState(pendingBackup.state);
     setPendingBackup(null);
     toast.success("Backup imported.");

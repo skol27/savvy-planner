@@ -95,6 +95,15 @@ async function saveFileBackup(backup: FinanceBackup): Promise<void> {
   if (!response.ok) throw new Error("Could not save local data file.");
 }
 
+async function saveBackupSnapshot(backup: FinanceBackup): Promise<void> {
+  const response = await fetch("/api/backups", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(backup),
+  });
+  if (!response.ok) throw new Error("Could not save backup snapshot.");
+}
+
 interface Store extends FinanceState {
   setSettings: (s: Settings) => void;
   setBudgetCats: React.Dispatch<React.SetStateAction<BudgetCategory[]>>;
@@ -109,6 +118,7 @@ interface Store extends FinanceState {
   resetToWorkbook: () => void;
   importState: (state: FinanceState) => void;
   exportBackup: () => FinanceBackup;
+  createBackupSnapshot: (reason: string) => Promise<boolean>;
   persistenceStatus: PersistenceStatus;
   persistenceMessage: string;
   trackedMonths: string[];
@@ -284,6 +294,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const exportBackup = React.useCallback(() => createBackup(currentState), [currentState]);
 
+  const createBackupSnapshot = React.useCallback(
+    async (reason: string) => {
+      if (!filePersistenceAvailable.current) return false;
+      try {
+        await saveBackupSnapshot(createBackup(currentState, new Date().toISOString(), reason));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [currentState],
+  );
+
   const trackedMonths = React.useMemo(() => {
     const set = new Set<string>();
     nwPositions.forEach((p) => Object.keys(p.balances).forEach((m) => set.add(m)));
@@ -316,6 +339,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         resetToWorkbook,
         importState,
         exportBackup,
+        createBackupSnapshot,
         persistenceStatus,
         persistenceMessage,
         trackedMonths,

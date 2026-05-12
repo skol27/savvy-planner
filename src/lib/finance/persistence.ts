@@ -32,6 +32,7 @@ export interface FinanceBackup {
   app: typeof BACKUP_APP_ID;
   schemaVersion: typeof BACKUP_SCHEMA_VERSION;
   exportedAt: string;
+  reason?: string;
   state: FinanceState;
 }
 
@@ -47,11 +48,13 @@ export type PersistenceStatus =
 export function createBackup(
   state: FinanceState,
   exportedAt = new Date().toISOString(),
+  reason?: string,
 ): FinanceBackup {
   return {
     app: BACKUP_APP_ID,
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt,
+    reason,
     state,
   };
 }
@@ -90,11 +93,13 @@ export function parseBackup(value: unknown): FinanceBackup | null {
     app: BACKUP_APP_ID,
     schemaVersion: BACKUP_SCHEMA_VERSION,
     exportedAt: value.exportedAt,
+    reason: typeof value.reason === "string" ? value.reason : undefined,
     state,
   };
 }
 
-export function backupFileName(date = new Date()): string {
+export function backupFileName(date = new Date(), reason?: string): string {
   const stamp = date.toISOString().replace(/[:.]/g, "-");
-  return `savvy-planner-backup-${stamp}.json`;
+  const suffix = reason ? `-${reason.toLowerCase().replace(/[^a-z0-9]+/g, "-")}` : "";
+  return `savvy-planner-backup-${stamp}${suffix}.json`;
 }

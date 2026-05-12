@@ -90,6 +90,7 @@ function BudgetDashboard() {
   const {
     positions,
     setPositions,
+    createBackupSnapshot,
     transactions,
     budgetCats,
     settings,
@@ -255,7 +256,7 @@ function BudgetDashboard() {
     });
   };
 
-  const syncPositions = (sec: BudgetSection, positionIds: string[], label: string) => {
+  const syncPositions = async (sec: BudgetSection, positionIds: string[], label: string) => {
     const targetIds = new Set(positionIds);
     const periodLabel =
       period === "Month" ? `${MONTHS[selectedMonth - 1]} ${year}` : `${period} ${year}`;
@@ -264,6 +265,11 @@ function BudgetDashboard() {
         `Sync ${label} budget values to tracked values for ${periodLabel}? This updates Budget Planner values for the selected period.`,
       )
     ) {
+      return;
+    }
+    const backedUp = await createBackupSnapshot(`before-budget-sync-${sec}-${label}`);
+    if (!backedUp) {
+      window.alert("Sync stopped. Automatic backup could not be written.");
       return;
     }
     setPositions((prev) =>
